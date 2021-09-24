@@ -1,0 +1,303 @@
+import math
+import tkinter as tk
+from tkinter import *
+from tkinter import filedialog
+window = tk.Tk() #创建窗口
+window.title('附和导线计算')  # 标题
+window.geometry('800x750')  # 窗口尺寸
+text1 = tk.Text(window, height=24, width = 100)  #创建一个输出窗口
+text1.place(x=80, y=380)
+#以下为建立窗口中的全局变量
+txt1 = tk.StringVar()
+txt2 = tk.StringVar(0,0)
+txt21 = tk.StringVar(0,0)
+txt3 = tk.StringVar(0,0)
+txt31 = tk.StringVar(0,0)
+txt4 = tk.StringVar(0,0)
+txt41 = tk.StringVar(0,0)
+txt_x1 = tk.StringVar(0,0)
+txt_y1 = tk.StringVar(0,0)
+txt_x2 = tk.StringVar(0,0)
+txt_y2 = tk.StringVar(0,0)
+file_path = ''  #存储文件路径的变量
+file_text = ''  #存储打开的文件的变量
+i = []  #存储读取的文件分解后的变量
+i2 = []  #存储再整理数据
+n = 0 #存储待测点的个数
+F_Ang = 0  #起始边方位角
+L_Ang = 0 #尾边方位角
+xy_1 = [] #存储起点坐标
+xy_2 = [] #存储终点坐标
+L_or_R = 'L' #存储测量角为左角还是右角
+def Get_n(text): #获取待测点个数
+    global n
+    i = 0
+    for j in text:
+        i = i + 1
+    n = i
+    return n
+def Jiao_to_Hu(a1,a2,a3): #角度转化为弧度,a1,a2,a3分别为度分秒
+    a = a1 + a2/60 + a3/3600
+    return (math.pi * a)/180
+def Hu_to_Jiao(a):  #弧度转化为角度
+    b = []
+    b.append(int(a*180/math.pi))
+    b.append(int(((a*180/math.pi) - b[0])*60))
+    b.append(Reserve(((((a*180/math.pi) - b[0]) * 60)-b[1])*60,1))
+    return b
+def Re_Do(i): #将获取且分解的数据再进行整理，将其角度全部转化为弧度
+    global i2
+    pick2 = []
+    bool = 1
+    for pick in i:
+        try:
+            pick2.append(pick[0])
+            pick2.append(Jiao_to_Hu(float(pick[1]),float(pick[2]),float(pick[3])))
+            pick2.append(float(pick[4]))
+
+        except(IndexError,ValueError):
+            print(1)
+            i2 = []
+            pick2 = []
+            bool = 0
+            re_window()
+        else:
+            i2.append(pick2)
+        if bool == 0:
+            break
+        pick2 = []
+def Azi(a1,a2,dir): #导线前后边方位角计算，参数依次为前边的方位角弧度，后边的水平角弧度，角的方向（L or R）
+    if(dir=='L'):
+        q = a1 - math.pi + a2
+        if(q<0): return math.pi*2+q
+        else:
+            return q
+    if(dir=='R'):
+        q = a1 + math.pi - a2
+        if (q < 0):
+            return math.pi * 2 + q
+        else:
+            return q
+def Jiao_BiHeCha(ang1,angs,n,dir):    #角度闭合差函数
+    sum = 0.0
+    if(dir=='R'):
+        for ang in angs:
+            sum = ang + sum
+        return ang1 + n*math.pi - sum - L_Ang
+    if(dir=='L'):
+        for ang in angs:
+            sum = ang + sum
+        return ang1 - n*math.pi + sum - L_Ang
+def Str_to_List(a): #将读取的数据分解并转化为列表
+    global i
+    for q in a:
+        q = q.strip('\n')
+        q = q.split(',')
+        i.append(q)
+def open_file():   #设计按钮b1所执行的打开文件函数,且实现获取点的数量操作及读取文件分解操作
+    global file_path
+    global file_text
+    global n,i
+    file_path = filedialog.askopenfilename(title = '选择文件',filetypes=[('TXT', '*.txt'),('All Files', '*')],initialdir = 'C:/')
+    if file_path is not None:
+        with open(file = file_path) as file:
+            try:
+                file_text = file.readlines()
+            except(IndexError, ValueError):
+                re_window()
+                return 0
+    txt1.set(file_path)
+    Str_to_List(file_text)
+    n = Get_n(file_text)
+    Re_Do(i)
+def Get_Data(): #获取起始边、尾边方位角，起点坐标、终点坐标函数
+    global F_Ang,L_Ang,xy_1,xy_2
+    a = txt2.get()
+    b = txt3.get()
+    c = txt4.get()
+    F_Ang = Jiao_to_Hu(int(a),int(b),int(c))
+    d = str(txt21.get())
+    e = str(txt31.get())
+    f = str(txt41.get())
+    L_Ang = Jiao_to_Hu(int(d),int(e),int(f))
+    x1 = float(txt_x1.get())
+    y1 = float(txt_y1.get())
+    x2 = float(txt_x2.get())
+    y2 = float(txt_y2.get())
+    xy_1 = [x1,y1]
+    xy_2 = [x2,y2]
+
+def L():
+    global L_or_R
+    L_or_R = 'L'
+
+def R():
+    global L_or_R
+    L_or_R = 'R'
+
+def Reserve(x,n): #保留指定有效位,n为位数
+    y = 10**n
+    x = (int(x*y + 0.5)) / y
+    return x
+
+def Forward(x1,y1,d,a):  #坐标正算函数,d为边长，a为弧度
+    x2 = x1 + d * math.cos(a)
+    y2 = y1 + d * math.sin(a)
+    return [x2,y2]
+
+def ZengLiang(s,Jiao,X_or_Y): #导线坐标闭合差分配
+    if(X_or_Y=='x'):
+        x = []
+        i = 0
+        for j in range(n-1):
+            x.append(i2[i][2] * math.cos(Jiao[i+1]) - s/(n-1))
+            i = i+1
+        return x
+    else:
+        y = []
+        i = 0
+        for j in range(n - 1):
+            y.append(i2[i][2] * math.sin(Jiao[i + 1]) - s / (n - 1))
+            i = i+1
+        return y
+
+def Point(x,y): #计算点坐标的函数
+    point1 = []
+    point2 = []
+    X = xy_1[0]
+    Y = xy_1[1]
+    j = 0
+    for i in range(n-2):
+        X = x[j] +X
+        Y = y[j] +Y
+        point2.append(i2[j+1][0])
+        point2.append(X)
+        point2.append(Y)
+        point1.append(point2)
+        point2 = []
+        j = j+1
+    return point1
+
+def Calculation():   #附和导线计算函数
+    Jiao = [F_Ang] #建立一个只存储方位角的列表
+    Jiao2 = [] #建立一个只存储水平角的列表
+
+    for j in i2:   #将各水平角放于Jiao2中
+        Jiao2.append(j[1])
+
+    W = Jiao_BiHeCha(F_Ang,Jiao2,n,L_or_R) #计算角度闭合差
+    i = 0
+    if(math.fabs(W)<(40/3600)*math.pi*math.sqrt(n)/180): #检验闭合差是否超限,并分配闭合差
+        if(L_or_R=='L'):
+            for j in Jiao2:
+                Jiao2[i] = j - W/n
+                i = i+1
+        else:
+            for j in Jiao2:
+                Jiao2[i] = j + W/n
+                i = i+1
+    else:
+        text1.insert(INSERT,'角度闭合差超限！\n')
+        return False
+
+    #将各边方位角推算出来，并存储于Jiao中
+    i = 0
+    for j in Jiao2:
+        Jiao.append(Azi(Jiao[i], j, L_or_R))
+        i = i + 1
+
+    #输出角度闭合差、分配的水平角以及方位角信息
+    text1.insert(INSERT,'角度闭合差为：'+str(Hu_to_Jiao(W)[0])+'度'+str(Hu_to_Jiao(W)[1])+'分'+str(Hu_to_Jiao(W)[2])+'秒\n')
+    text1.insert(INSERT,'角度闭合差分配后各水平角为：\n')
+    for j in Jiao2:
+        text1.insert(INSERT,str(Hu_to_Jiao(j)[0])+'度'+str(Hu_to_Jiao(j)[1])+'分'+str(Hu_to_Jiao(j)[2])+'秒\n')
+    text1.insert(INSERT,'从已知边起到终边的方位角：\n')
+    for j in Jiao:
+        text1.insert(INSERT,str(Hu_to_Jiao(j)[0])+'度'+str(Hu_to_Jiao(j)[1])+'分'+str(Hu_to_Jiao(j)[2])+'秒\n')
+
+    #从已知起始点开始推算终点坐标，并计算与已知终点坐标增量差
+    i = 0
+    s = [] #临时存储坐标
+    for k in i2:
+        if(i<n):
+            if(i==0):
+                s = Forward(xy_1[0],xy_1[1],k[2],Jiao[i+1]) #坐标正算
+                i = i+1
+            else:
+                s = Forward(s[0],s[1],k[2],Jiao[i+1]) #坐标正算
+                i = i+1
+    #计算坐标增量差
+    s[0] = s[0] - xy_2[0]
+    s[1] = s[1] - xy_2[1]
+    S = math.sqrt(s[0]**2 + s[1]**2)
+    E = 0 #存储导线总长
+    for e in i2: #计算导线总长
+        E = e[2] + E
+    K = S/E  #计算导线相对闭合差
+    if(K>(1/4000)):  #检验是否超限
+        text1.insert(INSERT,'导线相对闭合差超限！\n')
+        return False
+
+    #分配导线闭合差
+    x = ZengLiang(s[0],Jiao,'x') #存储分配后的x坐标增量
+    y = ZengLiang(s[1],Jiao,'y') #存储分配后的y坐标增量
+
+    #输出坐标增量闭合差分配
+    text1.insert(INSERT,'计算坐标增量闭合差：X方向:'+str(s[0])+'  Y方向:'+str(s[1])+'\n分配后各坐标增量：\n')
+    text1.insert(INSERT,'X:' + str(x) + '\n' + 'Y:' + str(y) + '\n')
+
+    #计算各点坐标
+    point = Point(x,y)
+    text1.insert(INSERT,'输出待测点坐标:\n')
+    i = 0
+    for j in range(n-2):
+        text1.insert(INSERT,'点号:' + str(point[i][0]) +'  坐标: ( ' + str(Reserve(point[i][1],2)) + ',' + str(Reserve(point[i][2],2)) + ' )\n')
+        i = i+1
+
+def re_window():
+    window = tk.Tk()
+    window.geometry('300x100')
+    window.title("发生错误")
+    label = tk.Label(window, font=('楷书', 15), width=18, bd=3, text='数据文件损坏').place(x=25, y=15)
+    labe2 = tk.Label(window, font=('楷书', 15), width=25, bd=3, text='或者文件未按特定格式存储').place(x=25, y=45)
+    window.mainloop()
+
+def Window():    #设置窗口界面及功能
+    global window
+    label1 = tk.Label(window,text='附和导线的计算',font=('楷书', 25),width=20,height=2).pack()
+    label2 = tk.Label(window,text='输入起始边方位角:',font=('楷书', 15),width=20,height=2).place(x = 35,y = 150)
+    label21 = tk.Label(window,text='输入尾边方位角:',font=('楷书', 15),width=20,height=2).place(x = 25,y = 190)
+    label3 = tk.Label(window,text='度',font=('楷书', 15),width=3,height=2).place(x = 275,y = 150)
+    label31 = tk.Label(window,text='度',font=('楷书', 15),width=3,height=2).place(x = 275,y = 190)
+    label4 = tk.Label(window,text='分',font=('楷书', 15),width=3,height=2).place(x = 355,y = 150)
+    label41 = tk.Label(window,text='分',font=('楷书', 15),width=3,height=2).place(x = 355,y = 190)
+    label5 = tk.Label(window,text='秒',font=('楷书', 15),width=3,height=2).place(x = 435,y = 150)
+    label51 = tk.Label(window,text='秒',font=('楷书', 15),width=3,height=2).place(x = 435,y = 190)
+    label6 = tk.Label(window,text='输入已知起始点坐标:',font=('楷书', 15),width=20,height=2).place(x = 25,y = 230)
+    label61 = tk.Label(window,text='X:',font=('楷书', 15),width=2,height=2).place(x = 230,y = 230)
+    label62 = tk.Label(window,text='Y:',font=('楷书', 15),width=2,height=2).place(x = 330,y = 230)
+    label71 = tk.Label(window,text='X:',font=('楷书', 15),width=2,height=2).place(x = 230,y = 270)
+    label72 = tk.Label(window,text='Y:',font=('楷书', 15),width=2,height=2).place(x = 330,y = 270)
+    label7 = tk.Label(window,text='输入已知终点坐标:',font=('楷书', 15),width=20,height=2).place(x = 25,y = 270)
+    label8 = tk.Label(window, text='选择测量角方向:', font=('楷书', 15), width=20, height=2).place(x=510, y=200)
+    e1 = tk.Entry(window,font=('楷书', 17),width = 40,bd = 5,textvariable = txt1).place(x = 230,y = 95)
+    e2 = tk.Entry(window,font=('楷书', 13),width = 5,bd = 2,textvariable = txt2).place(x = 230,y = 160)
+    e21 = tk.Entry(window,font=('楷书', 13),width = 5,bd = 2,textvariable = txt21).place(x = 230,y = 200)
+    e3 = tk.Entry(window,font=('楷书', 13),width = 5,bd = 2,textvariable = txt3).place(x = 310,y = 160)
+    e31 = tk.Entry(window,font=('楷书', 13),width = 5,bd = 2,textvariable = txt31).place(x = 310,y = 200)
+    e4 = tk.Entry(window,font=('楷书', 13),width = 5,bd = 2,textvariable = txt4).place(x = 390,y = 160)
+    e41 = tk.Entry(window,font=('楷书', 13),width = 5,bd = 2,textvariable = txt41).place(x = 390,y = 200)
+    e5x = tk.Entry(window,font=('楷书', 13),width = 7,bd = 2,textvariable = txt_x1).place(x = 260,y = 240)
+    e51y = tk.Entry(window,font=('楷书', 13),width = 7,bd = 2,textvariable = txt_y1).place(x = 360,y = 240)
+    e6x = tk.Entry(window,font=('楷书', 13),width = 7,bd = 2,textvariable = txt_x2).place(x = 260,y = 280)
+    e61y = tk.Entry(window,font=('楷书', 13),width = 7,bd = 2,textvariable = txt_y2).place(x = 360,y = 280)
+    b1 = tk.Button(window,text = '选择测量数据',font=('楷书', 18),command = open_file).place(x = 50,y = 90)
+    b2 = tk.Button(window,text = '保存已知数据',font = ('楷书', 18),bd = 4,command = Get_Data).place(x = 530,y = 150)
+    b3 = tk.Button(window,text = '开始计算',font = ('楷书', 18),bd = 5,bg = 'green',command = Calculation)
+    b3.place(x = 100,y = 320)
+    v = tk.IntVar()
+    v.set(1)
+    c = tk.Radiobutton(window, variable = v, text='左角',font=('楷书', 13),value = 1, command = L).place(x=530,y=240)
+    c1 = tk.Radiobutton(window, variable = v, text='右角',font=('楷书', 13),value = 2, command = R).place(x=530,y=270)
+    window.mainloop()
+Window()
